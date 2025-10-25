@@ -13,7 +13,7 @@
     },
     {
       "key": "deviceId",
-      "value": "DEMO_ESP32_001",
+      "value": "DEMO_ESP32_{{$timestamp}}",
       "type": "string"
     }
   ],
@@ -244,7 +244,7 @@
                   "pm.test('Location data returned', function () {",
                   "    const responseJson = pm.response.json();",
                   "    pm.expect(responseJson.data).to.have.property('name');",
-                  "    pm.expect(responseJson.data.name).to.equal('Coffee Shop');",
+                  "    pm.expect(responseJson.data.name).to.include('Coffee Shop');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -261,7 +261,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Coffee Shop\",\n  \"latitude\": 40.7589,\n  \"longitude\": -73.9851,\n  \"type\": \"destination\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+              "raw": "{\n  \"name\": \"Coffee Shop {{$timestamp}}\",\n  \"latitude\": 40.7589,\n  \"longitude\": -73.9851,\n  \"type\": \"destination\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/locations",
@@ -593,7 +593,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Hackathon Venue\",\n  \"latitude\": 40.7589,\n  \"longitude\": -73.9851,\n  \"type\": \"destination\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+              "raw": "{\n  \"name\": \"Hackathon Venue {{$timestamp}}\",\n  \"latitude\": 40.7589,\n  \"longitude\": -73.9851,\n  \"type\": \"destination\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/locations",
@@ -632,7 +632,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"targetName\": \"Hackathon Venue\",\n  \"targetLat\": 40.7589,\n  \"targetLng\": -73.9851,\n  \"deviceId\": \"{{deviceId}}\"\n}"
+              "raw": "{\n  \"targetName\": \"Hackathon Venue {{$timestamp}}\",\n  \"targetLat\": 40.7589,\n  \"targetLng\": -73.9851,\n  \"deviceId\": \"{{deviceId}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/tts/navigation/start",
