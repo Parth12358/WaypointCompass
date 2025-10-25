@@ -9,6 +9,19 @@ const connectDB = async () => {
     // Enable geospatial indexing
     console.log('📍 Setting up geospatial indexes...');
     
+    // Set up indexes for Location model
+    const db = conn.connection.db;
+    
+    // Create geospatial index for locations
+    try {
+      await db.collection('locations').createIndex({ "location": "2dsphere" });
+      console.log('✅ Geospatial indexes created successfully');
+    } catch (indexError) {
+      console.log('⚠️  Geospatial index already exists or failed to create:', indexError.message);
+    }
+    
+    console.log('🎯 Database setup completed successfully');
+    
   } catch (error) {
     console.error('❌ Database connection error:', error.message);
     process.exit(1);

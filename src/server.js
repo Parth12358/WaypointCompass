@@ -15,9 +15,6 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Connect to MongoDB
-connectDB();
-
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: false, // Allow for development
@@ -95,11 +92,47 @@ app.use('*', (req, res) => {
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Waypoint Compass Backend running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+// Global error handlers
+process.on('uncaughtException', (error) => {
+  console.error('💥 Uncaught Exception:', error);
+  process.exit(1);
 });
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+// Start server after database connection
+const startServer = async () => {
+  try {
+    // Connect to MongoDB first
+    await connectDB();
+    console.log('🎯 Database connection completed, starting server...');
+    
+    // Start the HTTP server
+    const server = app.listen(PORT, () => {
+      console.log(`🚀 Waypoint Compass Backend running on port ${PORT}`);
+      console.log(`📍 Environment: ${process.env.NODE_ENV}`);
+      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+      console.log('✅ Server is ready to accept connections');
+    });
+
+    server.on('error', (error) => {
+      console.error('💥 Server error:', error);
+      process.exit(1);
+    });
+
+    // Keep the process alive
+    process.stdin.resume();
+
+  } catch (error) {
+    console.error('💥 Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+// Start the server
+startServer();
 
 module.exports = app;
