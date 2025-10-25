@@ -10,7 +10,7 @@
 
 const char* WIFI_SSID = "La Luna";
 const char* WIFI_PASSWORD = "access";
-const char* BACKEND_URL = "http://10.10.77.248:3000";
+const char* BACKEND_URL = "https://waypointcompass-production.up.railway.app";
 
 #define BUZZER_PIN 2
 #define SERVICE_UUID "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
