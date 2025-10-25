@@ -1,0 +1,434 @@
+{
+  "info": {
+    "name": "WaypointCompass API",
+    "description": "Complete API collection for WaypointCompass - ESP32 Navigation System with TTS",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://waypointcompass-production.up.railway.app",
+      "type": "string"
+    },
+    {
+      "key": "deviceId",
+      "value": "DEMO_ESP32_001",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔍 System Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Check if the server is running and healthy"
+          }
+        },
+        {
+          "name": "API Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Get all available API endpoints"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📍 GPS Tracking",
+      "item": [
+        {
+          "name": "Submit GPS Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 40.7128,\n  \"longitude\": -74.0060,\n  \"altitude\": 10,\n  \"accuracy\": 5,\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/gps",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "gps"]
+            },
+            "description": "Submit current GPS coordinates from ESP32"
+          }
+        },
+        {
+          "name": "Submit GPS - Central Park",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 40.7794,\n  \"longitude\": -73.9632,\n  \"altitude\": 15,\n  \"accuracy\": 3,\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/gps",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "gps"]
+            },
+            "description": "Demo GPS update - Central Park location"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📌 Location Management",
+      "item": [
+        {
+          "name": "Get All Locations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "locations"]
+            },
+            "description": "Retrieve all saved locations"
+          }
+        },
+        {
+          "name": "Save New Location",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Coffee Shop\",\n  \"latitude\": 40.7589,\n  \"longitude\": -73.9851,\n  \"type\": \"destination\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "locations"]
+            },
+            "description": "Save a new destination location"
+          }
+        },
+        {
+          "name": "Start Sidequest",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentLat\": 40.7128,\n  \"currentLng\": -74.0060,\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sidequest/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sidequest", "start"]
+            },
+            "description": "Find random nearby location for exploration"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛡️ Safety System",
+      "item": [
+        {
+          "name": "Analyze Route Safety",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/safety/analyze-route?fromLat=40.7128&fromLng=-74.0060&toLat=40.7589&toLng=-73.9851",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "safety", "analyze-route"],
+              "query": [
+                {
+                  "key": "fromLat",
+                  "value": "40.7128"
+                },
+                {
+                  "key": "fromLng",
+                  "value": "-74.0060"
+                },
+                {
+                  "key": "toLat",
+                  "value": "40.7589"
+                },
+                {
+                  "key": "toLng",
+                  "value": "-73.9851"
+                }
+              ]
+            },
+            "description": "Analyze safety along navigation route"
+          }
+        },
+        {
+          "name": "Find Emergency Services",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/safety/emergency-services?lat=40.7128&lng=-74.0060&radius=1000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "safety", "emergency-services"],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "40.7128"
+                },
+                {
+                  "key": "lng",
+                  "value": "-74.0060"
+                },
+                {
+                  "key": "radius",
+                  "value": "1000"
+                }
+              ]
+            },
+            "description": "Find nearby emergency services (hospitals, police)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔊 Text-to-Speech System",
+      "item": [
+        {
+          "name": "TTS Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tts/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tts", "status"]
+            },
+            "description": "Check TTS service status"
+          }
+        },
+        {
+          "name": "Speak Custom Text",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Welcome to WaypointCompass! Your navigation system is ready.\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tts/speak",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tts", "speak"]
+            },
+            "description": "Convert text to speech and announce"
+          }
+        },
+        {
+          "name": "Play Common Phrase",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phrase\": \"destination_reached\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tts/phrase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tts", "phrase"]
+            },
+            "description": "Play pre-generated common phrases"
+          }
+        },
+        {
+          "name": "Start Navigation Audio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetName\": \"Coffee Shop\",\n  \"targetLat\": 40.7589,\n  \"targetLng\": -73.9851,\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tts/navigation/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tts", "navigation", "start"]
+            },
+            "description": "Start audio navigation guidance"
+          }
+        },
+        {
+          "name": "Stop Navigation Audio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tts/navigation/stop",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tts", "navigation", "stop"]
+            },
+            "description": "Stop navigation audio announcements"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎯 Navigation Demo Flow",
+      "item": [
+        {
+          "name": "1. Check System Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "2. Submit Starting Location",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 40.7128,\n  \"longitude\": -74.0060,\n  \"altitude\": 10,\n  \"accuracy\": 5,\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/gps",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "gps"]
+            }
+          }
+        },
+        {
+          "name": "3. Save Destination",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Hackathon Venue\",\n  \"latitude\": 40.7589,\n  \"longitude\": -73.9851,\n  \"type\": \"destination\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "locations"]
+            }
+          }
+        },
+        {
+          "name": "4. Start Navigation Audio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetName\": \"Hackathon Venue\",\n  \"targetLat\": 40.7589,\n  \"targetLng\": -73.9851,\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tts/navigation/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tts", "navigation", "start"]
+            }
+          }
+        },
+        {
+          "name": "5. Announce Arrival",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Congratulations! You have arrived at the Hackathon Venue. Good luck with your presentation!\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tts/speak",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tts", "speak"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
