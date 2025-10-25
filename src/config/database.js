@@ -2,7 +2,12 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI);
+    // Railway provides MONGODB_URL environment variable
+    // Atlas uses MONGODB_URI
+    // Support both for flexibility
+    const mongoUri = process.env.MONGODB_URL || process.env.MONGODB_URI || 'mongodb://localhost:27017/waypointcompass';
+    
+    const conn = await mongoose.connect(mongoUri);
 
     console.log(`🗄️  MongoDB Connected: ${conn.connection.host}`);
     
