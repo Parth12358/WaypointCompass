@@ -2,6 +2,8 @@ const express = require('express');
 const { body, query, validationResult } = require('express-validator');
 const GPSData = require('../models/GPSData');
 const SafetyService = require('../services/safetyService');
+const navigationTrackingService = require('../services/navigationTrackingService');
+const ttsService = require('../services/ttsService');
 const asyncHandler = require('../utils/asyncHandler');
 
 const safetyService = new SafetyService();
@@ -108,17 +110,36 @@ router.post('/', [
 
     await gpsData.save();
 
+    // Update navigation tracking if there's an active navigation
+    let navigationUpdate = null;
+    if (deviceId) {
+      const currentLocation = { latitude, longitude, altitude };
+      navigationUpdate = await navigationTrackingService.updateLocation(deviceId, currentLocation);
+    }
+
+    const responseData = {
+      latitude: gpsData.latitude,
+      longitude: gpsData.longitude,
+      altitude: gpsData.altitude,
+      accuracy: gpsData.accuracy,
+      timestamp: gpsData.timestamp.toISOString(),
+      source: gpsData.source
+    };
+
+    // Add navigation info if available
+    if (navigationUpdate) {
+      responseData.navigation = {
+        status: navigationUpdate.status,
+        currentDistance: navigationUpdate.currentDistance,
+        distanceChange: navigationUpdate.distanceChange,
+        totalDistanceTraveled: navigationUpdate.totalDistanceTraveled
+      };
+    }
+
     res.status(201).json({
       success: true,
       message: 'GPS location updated successfully',
-      data: {
-        latitude: gpsData.latitude,
-        longitude: gpsData.longitude,
-        altitude: gpsData.altitude,
-        accuracy: gpsData.accuracy,
-        timestamp: gpsData.timestamp.toISOString(),
-        source: gpsData.source
-      }
+      data: responseData
     });
 
   } catch (error) {

@@ -10,6 +10,7 @@ const connectDB = require('./config/database');
 const gpsRoutes = require('./routes/gps');
 const locationRoutes = require('./routes/locations');
 const safetyRoutes = require('./routes/safety');
+const ttsRoutes = require('./routes/tts');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -60,6 +61,7 @@ app.get('/health', (req, res) => {
 app.use('/api/gps', gpsRoutes);
 app.use('/api', locationRoutes);
 app.use('/api/safety', safetyRoutes);
+app.use('/api/tts', ttsRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -76,6 +78,12 @@ app.get('/', (req, res) => {
       safetyRoute: '/api/safety/analyze-route',
       safetyLocation: '/api/safety/analyze-location',
       emergencyServices: '/api/safety/emergency-services',
+      tts: '/api/tts',
+      ttsSpeak: '/api/tts/speak',
+      ttsPhrase: '/api/tts/phrase',
+      ttsStatus: '/api/tts/status',
+      ttsNavStart: '/api/tts/navigation/start',
+      ttsNavStop: '/api/tts/navigation/stop',
       health: '/health'
     }
   });
@@ -110,12 +118,19 @@ const startServer = async () => {
     await connectDB();
     console.log('🎯 Database connection completed, starting server...');
     
-    // Start the HTTP server
-    const server = app.listen(PORT, () => {
+    // Initialize TTS service
+    console.log('🔊 Initializing TTS service...');
+    const ttsService = require('./services/ttsService');
+    await ttsService.preGenerateCommonPhrases();
+    
+    // Start the HTTP server on all network interfaces
+    const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Waypoint Compass Backend running on port ${PORT}`);
       console.log(`📍 Environment: ${process.env.NODE_ENV}`);
-      console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-      console.log('✅ Server is ready to accept connections');
+      console.log(`🔗 Local access: http://localhost:${PORT}/health`);
+      console.log(`🌐 Network access: http://10.10.77.248:${PORT}/health`);
+      console.log('🔊 TTS service initialized with audio feedback');
+      console.log('✅ Server is ready to accept connections from ESP32');
     });
 
     server.on('error', (error) => {
