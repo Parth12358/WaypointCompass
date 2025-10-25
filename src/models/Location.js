@@ -1,19 +1,13 @@
 const mongoose = require('mongoose');
 
-const sidequestSchema = new mongoose.Schema({
-  title: {
+const locationSchema = new mongoose.Schema({
+  name: {
     type: String,
     required: true,
     trim: true,
-    maxlength: 100
+    maxlength: 50
   },
-  description: {
-    type: String,
-    required: true,
-    trim: true,
-    maxlength: 500
-  },
-  // Target location for the sidequest
+  // Target coordinates
   location: {
     type: {
       type: String,
@@ -22,7 +16,7 @@ const sidequestSchema = new mongoose.Schema({
     },
     coordinates: {
       type: [Number], // [longitude, latitude]
-      required: true
+      required: false // Will be set by pre-save middleware
     }
   },
   latitude: {
@@ -37,81 +31,71 @@ const sidequestSchema = new mongoose.Schema({
     min: -180,
     max: 180
   },
+  // Type of location
+  type: {
+    type: String,
+    enum: ['saved', 'sidequest'],
+    required: true
+  },
   // Completion radius in meters
   completionRadius: {
     type: Number,
     default: 50,
     min: 5,
-    max: 1000
+    max: 200
   },
-  // Difficulty level
+  // Is this the current target?
+  isActive: {
+    type: Boolean,
+    default: false
+  },
+  // Landmark-specific fields (for sidequests)
+  hiddenName: {
+    type: String,
+    trim: true
+  },
+  hiddenDescription: {
+    type: String,
+    trim: true
+  },
+  hiddenCategory: {
+    type: String,
+    trim: true
+  },
   difficulty: {
     type: String,
     enum: ['easy', 'medium', 'hard'],
-    default: 'medium'
+    default: 'easy'
   },
-  // Rewards/points for completion
-  points: {
-    type: Number,
-    default: 100,
-    min: 0
-  },
-  // Quest type/category
-  category: {
-    type: String,
-    enum: ['exploration', 'photography', 'trivia', 'challenge', 'discovery'],
-    default: 'exploration'
-  },
-  // Prerequisites or requirements
-  requirements: [{
+  osmId: {
     type: String,
     trim: true
-  }],
-  // Hints for the quest
-  hints: [{
-    text: String,
-    unlockDistance: Number // Distance in meters when hint becomes available
-  }],
-  // Status
-  isActive: {
-    type: Boolean,
-    default: true
   },
-  // Creation info
-  createdBy: {
-    type: String,
-    default: 'system'
-  },
+  // Creation timestamp
   createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
     type: Date,
     default: Date.now
   }
 });
 
 // Create geospatial index for location-based queries
-sidequestSchema.index({ location: '2dsphere' });
-sidequestSchema.index({ isActive: 1 });
-sidequestSchema.index({ category: 1 });
-sidequestSchema.index({ difficulty: 1 });
+locationSchema.index({ location: '2dsphere' });
+locationSchema.index({ isActive: 1 });
+locationSchema.index({ type: 1 });
 
-// Pre-save middleware to set GeoJSON location and update timestamp
-sidequestSchema.pre('save', function(next) {
+// Pre-save middleware to set GeoJSON location
+locationSchema.pre('save', function(next) {
   if (this.longitude !== undefined && this.latitude !== undefined) {
     this.location = {
       type: 'Point',
       coordinates: [this.longitude, this.latitude]
     };
   }
-  this.updatedAt = Date.now();
   next();
 });
 
 // Method to check if a location is within completion radius
-sidequestSchema.methods.isWithinCompletionRadius = function(lat, lng) {
+locationSchema.methods.isWithinCompletionRadius = function(lat, lng) {
   const earthRadius = 6371000; // Earth radius in meters
   const dLat = (lat - this.latitude) * Math.PI / 180;
   const dLng = (lng - this.longitude) * Math.PI / 180;
@@ -124,4 +108,4 @@ sidequestSchema.methods.isWithinCompletionRadius = function(lat, lng) {
   return distance <= this.completionRadius;
 };
 
-module.exports = mongoose.model('Sidequest', sidequestSchema);
+module.exports = mongoose.model('Location', locationSchema);

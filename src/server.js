@@ -8,8 +8,7 @@ require('dotenv').config();
 
 const connectDB = require('./config/database');
 const gpsRoutes = require('./routes/gps');
-const sidequestRoutes = require('./routes/sidequests');
-const voiceRoutes = require('./routes/voice');
+const locationRoutes = require('./routes/locations');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -61,8 +60,7 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/gps', gpsRoutes);
-app.use('/api/sidequests', sidequestRoutes);
-app.use('/api/voice', voiceRoutes);
+app.use('/api', locationRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -71,8 +69,10 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       gps: '/api/gps',
-      sidequests: '/api/sidequests/nearby',
-      voice: '/api/voice/query',
+      target: '/api/target',
+      locations: '/api/locations',
+      sidequestStart: '/api/sidequest/start',
+      targetReached: '/api/target/reached',
       health: '/health'
     }
   });

@@ -1,78 +1,102 @@
-# Waypoint Compass Backend
+# Waypoint Compass
 
-A Node.js Express backend server for the Waypoint Compass ESP32 project. Provides GPS data, location-based sidequests, and voice processing capabilities.
+A digital compass system that helps users navigate to saved locations using ESP32 hardware, iPhone GPS via Bluetooth, and Express.js backend.
 
-## Features
+## Project Overview
 
-- **GPS Endpoint**: Provides current location data to ESP32 devices
-- **Sidequests**: Location-based challenges and activities
-- **Voice Processing**: OpenAI Whisper STT, GPT LLM, and TTS integration
-- **Geospatial Queries**: MongoDB with 2dsphere indexing for location-based operations
-- **Security**: CORS, rate limiting, helmet security headers
-- **Error Handling**: Comprehensive error handling and validation
+This project creates a simple compass that points to saved locations (like a parked car, pizza place, etc.) with an optional "mystery sidequest" feature that discovers interesting nearby locations.
+
+**Key Innovation**: Uses iPhone GPS data transmitted via Bluetooth Low Energy (BLE) to ESP32, since the hardware doesn't include GPS sensors.
+
+## Current Status (October 2024)
+
+✅ **Backend Complete**: Full Express.js API with MongoDB integration  
+✅ **Database Design**: Geospatial indexing for location queries  
+✅ **API Endpoints**: All routes implemented and tested  
+✅ **BLE Integration**: Backend adapted for iPhone GPS via nRF Connect  
+🔄 **ESP32 Code**: Example BLE + HTTP client code provided  
+⏳ **Sidequest Discovery**: OpenStreetMap integration planned  
+
+## Architecture
+
+```
+iPhone (GPS) → nRF Connect App → BLE → ESP32 → HTTP → Backend → MongoDB
+                                   ↓
+                              480x480 Display (Compass)
+```
+
+## Hardware Requirements
+
+- **ESP32-S3**: Main processor with WiFi and BLE
+- **RP2040**: Co-processor for display management  
+- **480x480 Display**: Compass visualization
+- **iPhone**: GPS source via nRF Connect app
+- **No GPS Module Needed**: Uses BLE from iPhone instead
+
+## Tech Stack
+
+- **Backend**: Node.js, Express.js, MongoDB
+- **Database**: Geospatial indexing with 2dsphere
+- **Hardware**: ESP32-S3 + RP2040 dual processor setup
+- **Communication**: BLE (iPhone ↔ ESP32), HTTP (ESP32 ↔ Backend)
+- **GPS Source**: iPhone location via nRF Connect BLE app
 
 ## API Endpoints
 
-### GPS Endpoints
-- `GET /api/gps` - Get current GPS location
-- `POST /api/gps` - Update GPS location (for testing)
-- `GET /api/gps/history` - Get GPS history
-- `GET /api/gps/status` - Get GPS system status
+### Core Compass API
+- `POST /api/gps/compass` - **Main endpoint**: Send GPS, get bearing + target info
+- `GET /api/target` - Get current active navigation target
+- `POST /api/target/reached` - Mark target as completed
 
-### Sidequest Endpoints
-- `GET /api/sidequests/nearby` - Get nearby location challenges
-- `POST /api/sidequests` - Create new sidequest (for testing)
-- `GET /api/sidequests/categories` - Get available categories
-- `POST /api/sidequests/complete` - Mark sidequest as completed
+### Location Management
+- `POST /api/locations` - Save new locations (car, restaurant, etc.)
+- `GET /api/locations` - List saved locations
+- `POST /api/sidequest/start` - Start mystery location discovery
 
-### Voice Endpoints
-- `POST /api/voice/query` - Process voice or text query with AI
-- `POST /api/voice/tts` - Text-to-speech conversion
-- `GET /api/voice/status` - Get voice system status
+### GPS Data (for debugging)
+- `GET /api/gps` - Get latest GPS coordinates  
+- `POST /api/gps` - Store GPS coordinates
 
-### System Endpoints
+### System
 - `GET /health` - Health check
 - `GET /` - API information
 
 ## Quick Start
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+### 1. Backend Setup
+```bash
+npm install
+cp .env.example .env
+# Edit .env with MongoDB connection string
+npm start
+```
 
-2. **Set up environment variables:**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit `.env` and add your configuration:
-   - MongoDB connection string
-   - OpenAI API key
-   - Default GPS coordinates
+### 2. iPhone Setup
+1. Install "nRF Connect for Mobile" from App Store
+2. Follow guide in `docs/nrf-connect-setup.md`
+3. Connect to ESP32 and send GPS coordinates
 
-3. **Start MongoDB:**
-   ```bash
-   # Using Docker
-   docker run -d -p 27017:27017 --name mongodb mongo
+### 3. ESP32 Setup
+1. Flash ESP32 with code from `examples/esp32_compass_example.cpp`
+2. ESP32 will receive GPS via BLE and display compass
 
-   # Or start your local MongoDB instance
-   mongod
-   ```
+## Data Flow
 
-4. **Run the server:**
-   ```bash
-   # Development mode with auto-reload
-   npm run dev
+1. **iPhone GPS** → nRF Connect sends `"lat,lng"` via BLE
+2. **ESP32 receives** GPS coordinates and stores locally  
+3. **ESP32 calls** `POST /api/gps/compass` with coordinates
+4. **Backend calculates** bearing and distance to active target
+5. **ESP32 displays** compass pointing toward target
 
-   # Production mode
-   npm start
-   ```
+## Key Files
 
-5. **Test the API:**
-   ```bash
-   curl http://localhost:3000/health
-   ```
+- `src/server.js` - Main Express application
+- `src/routes/gps.js` - GPS and compass calculation endpoints
+- `src/routes/locations.js` - Location and sidequest management  
+- `src/models/Location.js` - Simple location schema (name, coordinates, type)
+- `src/models/GPSData.js` - GPS coordinate storage with cleanup
+- `examples/esp32_compass_example.cpp` - Complete ESP32 BLE + HTTP example
+- `docs/nrf-connect-setup.md` - iPhone BLE setup guide
 
 ## Environment Variables
 
@@ -81,166 +105,60 @@ A Node.js Express backend server for the Waypoint Compass ESP32 project. Provide
 | `NODE_ENV` | Environment (development/production) | development |
 | `PORT` | Server port | 3000 |
 | `MONGODB_URI` | MongoDB connection string | mongodb://localhost:27017/waypoint-compass |
-| `OPENAI_API_KEY` | OpenAI API key for voice processing | - |
-| `DEFAULT_LATITUDE` | Default GPS latitude | 37.7749 |
-| `DEFAULT_LONGITUDE` | Default GPS longitude | -122.4194 |
-| `RATE_LIMIT_WINDOW_MS` | Rate limit window in ms | 900000 |
-| `RATE_LIMIT_MAX_REQUESTS` | Max requests per window | 100 |
-
-## ESP32 Integration
-
-The server is designed to work with ESP32-S3 devices using HTTPS requests:
-
-### ESP32 Example Code
-```cpp
-#include <WiFiClientSecure.h>
-#include <HTTPClient.h>
-#include <ArduinoJson.h>
-
-// Get GPS data
-HTTPClient http;
-http.begin("https://your-server.com/api/gps");
-int httpCode = http.GET();
-
-if (httpCode == 200) {
-  String payload = http.getString();
-  DynamicJsonDocument doc(1024);
-  deserializeJson(doc, payload);
-  
-  float lat = doc["data"]["latitude"];
-  float lng = doc["data"]["longitude"];
-  
-  // Use coordinates for compass calculations
-}
-```
-
-### Recommended ESP32 Polling
-- GPS data: Every 5-10 seconds
-- Sidequests: Every 30-60 seconds (or when location changes significantly)
-- Voice queries: On-demand only
-
-## Database Schema
-
-### GPS Data
-```javascript
-{
-  latitude: Number,
-  longitude: Number,
-  altitude: Number,
-  accuracy: Number,
-  timestamp: Date,
-  source: String,
-  location: { type: "Point", coordinates: [lng, lat] }
-}
-```
-
-### Sidequests
-```javascript
-{
-  title: String,
-  description: String,
-  latitude: Number,
-  longitude: Number,
-  completionRadius: Number,
-  difficulty: String,
-  category: String,
-  points: Number,
-  location: { type: "Point", coordinates: [lng, lat] }
-}
-```
 
 ## Development
 
-### Scripts
-- `npm run dev` - Start with nodemon for development
-- `npm start` - Start production server
-- `npm test` - Run tests
-- `npm run lint` - Run ESLint
-- `npm run format` - Format code with Prettier
-
-### Testing Endpoints
-
-1. **Test GPS endpoint:**
-   ```bash
-   curl http://localhost:3000/api/gps
-   ```
-
-2. **Add test location:**
-   ```bash
-   curl -X POST http://localhost:3000/api/gps \
-     -H "Content-Type: application/json" \
-     -d '{"latitude": 37.7749, "longitude": -122.4194}'
-   ```
-
-3. **Create test sidequest:**
-   ```bash
-   curl -X POST http://localhost:3000/api/sidequests \
-     -H "Content-Type: application/json" \
-     -d '{
-       "title": "Find the Golden Gate Bridge",
-       "description": "Navigate to this iconic San Francisco landmark",
-       "latitude": 37.8199, "longitude": -122.4783,
-       "category": "exploration", "difficulty": "easy"
-     }'
-   ```
-
-4. **Test voice query:**
-   ```bash
-   curl -X POST http://localhost:3000/api/voice/query \
-     -H "Content-Type: application/json" \
-     -d '{"text": "What sidequests are nearby?"}'
-   ```
-
-## Deployment
-
-### Using PM2 (Recommended)
 ```bash
-npm install -g pm2
-pm2 start src/server.js --name waypoint-compass
-pm2 startup
-pm2 save
+npm run dev  # Development with auto-reload
+npm start    # Production mode
 ```
 
-### Using Docker
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY src/ ./src/
-EXPOSE 3000
-CMD ["node", "src/server.js"]
+## Testing Example
+
+```bash
+# Save a location
+curl -X POST http://localhost:3000/api/locations \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Home","latitude":37.7749,"longitude":-122.4194}'
+
+# Send GPS and get compass bearing  
+curl -X POST http://localhost:3000/api/gps/compass \
+  -H "Content-Type: application/json" \
+  -d '{"latitude":37.7849,"longitude":-122.4094}'
 ```
 
-### Environment Setup
-- Ensure MongoDB is accessible
-- Configure firewall for port 3000
-- Set up HTTPS with reverse proxy (nginx/Apache)
-- Add domain name and SSL certificate
+## Database Schema
 
-## Security Considerations
+### Location (Simplified)
+```javascript
+{
+  name: String,           // "Home", "Car", "Pizza Place"
+  latitude: Number,
+  longitude: Number,
+  type: String,          // "saved" or "sidequest"
+  isActive: Boolean,     // Currently targeted location
+  completionRadius: Number, // Meters to consider "reached"
+  location: { type: "Point", coordinates: [lng, lat] }
+}
+```
 
-- CORS is configured to allow ESP32 connections
-- Rate limiting prevents API abuse
-- Input validation on all endpoints
-- Helmet.js for security headers
-- Environment variables for sensitive data
+### GPS Data (BLE Source)
+```javascript
+{
+  latitude: Number,
+  longitude: Number,
+  source: String,        // "ble" from iPhone
+  deviceId: String,      // Optional device identifier
+  timestamp: Date
+}
+```
 
-## Performance
+## Next Steps
 
-- MongoDB geospatial indexing for fast location queries
-- Response compression enabled
-- Async/await pattern for non-blocking operations
-- Connection pooling for database
-- Request logging for monitoring
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make changes with proper error handling
-4. Add tests for new functionality
-5. Submit a pull request
+1. **Complete ESP32 Integration**: Test BLE + HTTP communication
+2. **OpenStreetMap Sidequests**: Auto-discover interesting locations within 0.5 miles
+3. **Display Optimization**: Improve compass visualization on 480x480 screen  
+4. **Error Handling**: Robust connection handling for BLE and WiFi
 
 ## License
 

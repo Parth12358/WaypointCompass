@@ -27,7 +27,7 @@ const gpsDataSchema = new mongoose.Schema({
   },
   source: {
     type: String,
-    enum: ['device', 'manual', 'simulation'],
+    enum: ['device', 'manual', 'simulation', 'ble'],
     default: 'device'
   },
   // GeoJSON format for MongoDB geospatial queries
@@ -39,7 +39,7 @@ const gpsDataSchema = new mongoose.Schema({
     },
     coordinates: {
       type: [Number], // [longitude, latitude]
-      required: true
+      required: false // Will be set by pre-save middleware
     }
   }
 });

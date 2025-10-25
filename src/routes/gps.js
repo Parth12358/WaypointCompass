@@ -49,7 +49,7 @@ router.get('/', asyncHandler(async (req, res) => {
   }
 }));
 
-// POST /api/gps - Update GPS location (for testing or manual updates)
+// POST /api/gps - Update GPS location from ESP32 (receives iPhone GPS via BLE)
 router.post('/', [
   body('latitude')
     .isFloat({ min: -90, max: 90 })
@@ -67,8 +67,12 @@ router.post('/', [
     .withMessage('Accuracy must be a positive number'),
   body('source')
     .optional()
-    .isIn(['device', 'manual', 'simulation'])
-    .withMessage('Source must be device, manual, or simulation')
+    .isIn(['ble', 'device', 'manual', 'simulation'])
+    .withMessage('Source must be ble, device, manual, or simulation'),
+  body('deviceId')
+    .optional()
+    .isString()
+    .withMessage('Device ID must be a string')
 ], asyncHandler(async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -80,7 +84,15 @@ router.post('/', [
   }
 
   try {
-    const { latitude, longitude, altitude = 0, accuracy = 0, source = 'manual' } = req.body;
+    const { latitude, longitude, altitude = 0, accuracy = 0, source = 'ble', deviceId } = req.body;
+
+    // Delete old GPS data from same device to keep database clean (optimized for high frequency)
+    if (deviceId) {
+      await GPSData.deleteMany({ 
+        source: 'ble',
+        timestamp: { $lt: new Date(Date.now() - 60000) } // Delete entries older than 1 minute (for high frequency updates)
+      });
+    }
 
     const gpsData = new GPSData({
       latitude,
@@ -188,10 +200,11 @@ router.get('/status', asyncHandler(async (req, res) => {
     res.json({
       success: true,
       data: {
-        isActive: timeSinceUpdate ? timeSinceUpdate < 60000 : false, // Active if updated within 1 minute
+        isActive: timeSinceUpdate ? timeSinceUpdate < 10000 : false, // Active if updated within 10 seconds (high frequency)
         totalRecords,
         lastUpdate: lastUpdate ? lastUpdate.toISOString() : null,
         timeSinceLastUpdate: timeSinceUpdate ? Math.floor(timeSinceUpdate / 1000) : null,
+        updateFrequency: timeSinceUpdate ? `~${Math.floor(10000 / timeSinceUpdate)} updates/sec` : null,
         currentLocation: recentRecord ? {
           latitude: recentRecord.latitude,
           longitude: recentRecord.longitude,
@@ -208,5 +221,115 @@ router.get('/status', asyncHandler(async (req, res) => {
     });
   }
 }));
+
+// POST /api/gps/compass - ESP32 sends current GPS and gets bearing to target
+router.post('/compass', [
+  body('latitude')
+    .isFloat({ min: -90, max: 90 })
+    .withMessage('Latitude must be between -90 and 90'),
+  body('longitude')
+    .isFloat({ min: -180, max: 180 })
+    .withMessage('Longitude must be between -180 and 180')
+], asyncHandler(async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      error: 'Validation error',
+      details: errors.array()
+    });
+  }
+
+  try {
+    const { latitude, longitude } = req.body;
+
+    // Store the current GPS location
+    const gpsData = new GPSData({
+      latitude,
+      longitude,
+      source: 'ble',
+      timestamp: new Date()
+    });
+    await gpsData.save();
+
+    // Get current active target
+    const Location = require('../models/Location');
+    const activeTarget = await Location.findOne({ isActive: true })
+      .select('name latitude longitude type completionRadius -_id');
+
+    if (!activeTarget) {
+      return res.json({
+        success: true,
+        data: {
+          hasTarget: false,
+          message: 'No active target set',
+          currentLocation: { latitude, longitude }
+        }
+      });
+    }
+
+    // Calculate bearing from current GPS to target
+    const bearing = calculateBearing(latitude, longitude, activeTarget.latitude, activeTarget.longitude);
+    const distance = calculateDistance(latitude, longitude, activeTarget.latitude, activeTarget.longitude);
+
+    // Check if user is close enough to complete target
+    const isWithinRadius = distance <= activeTarget.completionRadius;
+
+    // For sidequests, don't reveal name until completion
+    const targetName = activeTarget.type === 'saved' ? activeTarget.name : 'Mystery Location';
+
+    res.json({
+      success: true,
+      data: {
+        hasTarget: true,
+        currentLocation: { latitude, longitude },
+        target: {
+          name: targetName,
+          latitude: activeTarget.latitude,
+          longitude: activeTarget.longitude,
+          type: activeTarget.type
+        },
+        compass: {
+          bearing: Math.round(bearing),
+          distance: Math.round(distance),
+          canComplete: isWithinRadius,
+          completionRadius: activeTarget.completionRadius
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('GPS compass error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process GPS and compass data'
+    });
+  }
+}));
+
+// Helper function to calculate bearing between two coordinates
+function calculateBearing(lat1, lng1, lat2, lng2) {
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const lat1Rad = lat1 * Math.PI / 180;
+  const lat2Rad = lat2 * Math.PI / 180;
+  
+  const y = Math.sin(dLng) * Math.cos(lat2Rad);
+  const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
+  
+  let bearing = Math.atan2(y, x) * 180 / Math.PI;
+  return (bearing + 360) % 360; // Normalize to 0-360 degrees
+}
+
+// Helper function to calculate distance between two coordinates
+function calculateDistance(lat1, lng1, lat2, lng2) {
+  const earthRadius = 6371000; // Earth radius in meters
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return earthRadius * c;
+}
 
 module.exports = router;
