@@ -1,0 +1,523 @@
+{
+  "info": {
+    "name": "WaypointCompass API - Railway Compatible",
+    "description": "Production-ready API collection for WaypointCompass - Works with Railway deployment limitations",
+    "version": "2.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://waypointcompass-production.up.railway.app",
+      "type": "string"
+    },
+    {
+      "key": "deviceId",
+      "value": "DEMO_ESP32_{{$timestamp}}",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔍 System Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('✅ System is healthy and ready', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.status).to.eql('healthy');",
+                  "});",
+                  "",
+                  "console.log('🟢 WaypointCompass system is LIVE and healthy!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Check if the server is running and healthy"
+          }
+        },
+        {
+          "name": "API Overview",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('API endpoints listed', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson).to.have.property('endpoints');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Get all available API endpoints"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📍 GPS Tracking",
+      "item": [
+        {
+          "name": "Submit GPS Data",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('📍 GPS location updated successfully', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.success).to.be.true;",
+                  "});",
+                  "",
+                  "console.log('🟢 ESP32 GPS coordinates received and processed!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 40.7128,\n  \"longitude\": -74.0060,\n  \"altitude\": 10,\n  \"accuracy\": 5,\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/gps",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "gps"]
+            },
+            "description": "Submit current GPS coordinates from ESP32"
+          }
+        },
+        {
+          "name": "Submit GPS - Central Park",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('GPS coordinates updated', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.success).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 40.7794,\n  \"longitude\": -73.9632,\n  \"altitude\": 15,\n  \"accuracy\": 3,\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/gps",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "gps"]
+            },
+            "description": "Demo GPS update - Central Park location"
+          }
+        }
+      ]
+    },
+    {
+      "name": "📌 Location Management",
+      "item": [
+        {
+          "name": "Get All Locations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('📌 Locations retrieved successfully', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.success).to.be.true;",
+                  "});",
+                  "",
+                  "console.log('🟢 Location database accessed successfully!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "locations"]
+            },
+            "description": "Retrieve all saved locations"
+          }
+        },
+        {
+          "name": "Save New Location",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('🎯 Destination saved successfully', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.success).to.be.true;",
+                  "});",
+                  "",
+                  "console.log('🟢 New destination location saved to database!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Coffee Shop {{$timestamp}}\",\n  \"latitude\": 40.7589,\n  \"longitude\": -73.9851,\n  \"type\": \"destination\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "locations"]
+            },
+            "description": "Save a new destination location"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛡️ Safety System",
+      "item": [
+        {
+          "name": "Analyze Route Safety",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('🛡️ Safety analysis completed', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.success).to.be.true;",
+                  "});",
+                  "",
+                  "console.log('🟢 Route safety analysis performed!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/safety/analyze-route?fromLat=40.7128&fromLng=-74.0060&toLat=40.7589&toLng=-73.9851",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "safety", "analyze-route"],
+              "query": [
+                {
+                  "key": "fromLat",
+                  "value": "40.7128"
+                },
+                {
+                  "key": "fromLng",
+                  "value": "-74.0060"
+                },
+                {
+                  "key": "toLat",
+                  "value": "40.7589"
+                },
+                {
+                  "key": "toLng",
+                  "value": "-73.9851"
+                }
+              ]
+            },
+            "description": "Analyze safety along navigation route"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔊 TTS System (Railway Limited)",
+      "description": "TTS endpoints with Railway deployment limitations",
+      "item": [
+        {
+          "name": "TTS Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('🔊 TTS service status retrieved', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.success).to.be.true;",
+                  "});",
+                  "",
+                  "console.log('🟢 TTS service is available (status only on Railway)!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tts/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tts", "status"]
+            },
+            "description": "Check TTS service status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎯 Hackathon Demo Flow (Railway Compatible)",
+      "description": "Perfect sequence for live demonstrations - works on Railway",
+      "item": [
+        {
+          "name": "1. System Health Check ✅",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('✅ System is healthy and ready', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.status).to.eql('healthy');",
+                  "});",
+                  "",
+                  "console.log('🟢 WaypointCompass system is LIVE on Railway!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Verify system is running"
+          }
+        },
+        {
+          "name": "2. GPS Location Update 📍",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('📍 GPS location updated successfully', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.success).to.be.true;",
+                  "});",
+                  "",
+                  "console.log('🟢 ESP32 GPS coordinates received and processed!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitude\": 40.7128,\n  \"longitude\": -74.0060,\n  \"altitude\": 10,\n  \"accuracy\": 5,\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/gps",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "gps"]
+            },
+            "description": "Simulate ESP32 sending current location"
+          }
+        },
+        {
+          "name": "3. Save Destination 🎯",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('🎯 Destination saved successfully', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.success).to.be.true;",
+                  "});",
+                  "",
+                  "console.log('🟢 Hackathon Venue saved to MongoDB database!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Hackathon Venue {{$timestamp}}\",\n  \"latitude\": 40.7589,\n  \"longitude\": -73.9851,\n  \"type\": \"destination\",\n  \"deviceId\": \"{{deviceId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "locations"]
+            },
+            "description": "Save target destination"
+          }
+        },
+        {
+          "name": "4. Route Safety Analysis 🛡️",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('🛡️ Safety analysis completed', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.success).to.be.true;",
+                  "});",
+                  "",
+                  "console.log('🟢 Route safety analysis performed!');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/safety/analyze-route?fromLat=40.7128&fromLng=-74.0060&toLat=40.7589&toLng=-73.9851",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "safety", "analyze-route"],
+              "query": [
+                {
+                  "key": "fromLat",
+                  "value": "40.7128"
+                },
+                {
+                  "key": "fromLng",
+                  "value": "-74.0060"
+                },
+                {
+                  "key": "toLat",
+                  "value": "40.7589"
+                },
+                {
+                  "key": "toLng",
+                  "value": "-73.9851"
+                }
+              ]
+            },
+            "description": "Analyze route safety"
+          }
+        },
+        {
+          "name": "5. Verify All Locations 📋",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('📋 Location database verified', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.success).to.be.true;",
+                  "});",
+                  "",
+                  "console.log('🟢 SUCCESS! Complete WaypointCompass demo executed!');",
+                  "console.log('🎉 All core features demonstrated successfully!');",
+                  "console.log('✨ TTS works locally - Railway has system limitations');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/locations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "locations"]
+            },
+            "description": "Verify all saved locations"
+          }
+        }
+      ]
+    }
+  ]
+}
