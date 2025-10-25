@@ -1,7 +1,10 @@
 const express = require('express');
 const { body, query, validationResult } = require('express-validator');
 const GPSData = require('../models/GPSData');
+const SafetyService = require('../services/safetyService');
 const asyncHandler = require('../utils/asyncHandler');
+
+const safetyService = new SafetyService();
 
 const router = express.Router();
 
@@ -278,6 +281,54 @@ router.post('/compass', [
     // For sidequests, don't reveal name until completion
     const targetName = activeTarget.type === 'saved' ? activeTarget.name : 'Mystery Location';
 
+    // Safety check - analyze current location for immediate hazards
+    let safetyWarnings = [];
+    try {
+      const currentLocationSafety = await safetyService.analyzeSafetyAtLocation(
+        latitude, 
+        longitude, 
+        'current_location'
+      );
+      
+      // Add warnings for high-risk current location
+      if (currentLocationSafety.riskScore > 3.0) {
+        safetyWarnings.push({
+          type: 'current_location_risk',
+          severity: 'warning',
+          message: '⚠️ You are in a high-risk area - exercise extra caution'
+        });
+      }
+      
+      // Add time-based warnings
+      if (currentLocationSafety.timeRisk && currentLocationSafety.timeRisk.riskLevel > 1.5) {
+        safetyWarnings.push({
+          type: 'time_warning', 
+          severity: 'caution',
+          message: `🌙 ${currentLocationSafety.timeRisk.factors.join(', ')} - stay alert`
+        });
+      }
+      
+      // If getting close to destination, check route safety
+      if (distance < 100 && distance > 20) {
+        const routeSafety = await safetyService.analyzeSafetyRoute(
+          latitude, longitude, 
+          activeTarget.latitude, activeTarget.longitude
+        );
+        
+        if (routeSafety.success && routeSafety.warnings && routeSafety.warnings.length > 0) {
+          safetyWarnings.push({
+            type: 'approaching_destination',
+            severity: 'info',
+            message: `🎯 Approaching destination - ${routeSafety.warnings[0].message}`
+          });
+        }
+      }
+      
+    } catch (safetyError) {
+      console.log('Safety check skipped:', safetyError.message);
+      // Don't fail the compass request if safety check fails
+    }
+
     res.json({
       success: true,
       data: {
@@ -294,6 +345,14 @@ router.post('/compass', [
           distance: Math.round(distance),
           canComplete: isWithinRadius,
           completionRadius: activeTarget.completionRadius
+        },
+        safety: safetyWarnings.length > 0 ? {
+          warnings: safetyWarnings,
+          hasWarnings: true,
+          message: 'Safety notices for your current location'
+        } : {
+          hasWarnings: false,
+          message: 'No immediate safety concerns detected'
         }
       }
     });

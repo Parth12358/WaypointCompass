@@ -4,9 +4,11 @@ const Location = require('../models/Location');
 const GPSData = require('../models/GPSData');
 const asyncHandler = require('../utils/asyncHandler');
 const LandmarkService = require('../services/landmarkService');
+const SafetyService = require('../services/safetyService');
 
 const router = express.Router();
 const landmarkService = new LandmarkService();
+const safetyService = new SafetyService();
 
 // GET /api/target - Get current target location (what compass points to)
 router.get('/target', asyncHandler(async (req, res) => {
@@ -247,7 +249,79 @@ router.post('/sidequest/start', [
     console.log(`Discovering landmarks near ${lat}, ${lng}`);
     const landmark = await landmarkService.getRandomSidequest(lat, lng, 800);
     
-    if (!landmark) {
+    let selectedLandmark = landmark;
+    let safetyWarnings = [];
+    
+    // Safety check for discovered landmark
+    if (landmark) {
+      try {
+        console.log(`Safety checking landmark: ${landmark.name} at ${landmark.latitude}, ${landmark.longitude}`);
+        const safetyCheck = await safetyService.analyzeSafetyAtLocation(
+          landmark.latitude, 
+          landmark.longitude, 
+          'sidequest_destination'
+        );
+        
+        // If landmark is too dangerous (risk score > 3.5), find an alternative
+        if (safetyCheck.riskScore > 3.5) {
+          console.log(`Landmark ${landmark.name} deemed too dangerous (risk: ${safetyCheck.riskScore}), finding alternative`);
+          
+          // Try to get alternative landmarks
+          const alternativeLandmarks = await landmarkService.discoverLandmarks(lat, lng, 1200);
+          const safeLandmarks = [];
+          
+          for (const altLandmark of alternativeLandmarks) {
+            const altSafety = await safetyService.analyzeSafetyAtLocation(
+              altLandmark.latitude, 
+              altLandmark.longitude, 
+              'alternative_check'
+            );
+            if (altSafety.riskScore <= 3.0) {
+              safeLandmarks.push(altLandmark);
+            }
+          }
+          
+          if (safeLandmarks.length > 0) {
+            selectedLandmark = safeLandmarks[Math.floor(Math.random() * safeLandmarks.length)];
+            console.log(`Using safer alternative: ${selectedLandmark.name} (risk: ${altSafety.riskScore})`);
+          } else {
+            // No safe alternatives, use original but add strong warnings
+            safetyWarnings.push({
+              type: 'high_risk_destination',
+              severity: 'warning',
+              message: '⚠️ This mystery location may require extra caution'
+            });
+          }
+        } else if (safetyCheck.riskScore > 2.0) {
+          // Moderate risk - add caution warning
+          safetyWarnings.push({
+            type: 'moderate_risk',
+            severity: 'caution', 
+            message: '🚨 Exercise caution when approaching this location'
+          });
+        }
+        
+        // Add time-based warnings if applicable
+        if (safetyCheck.timeRisk && safetyCheck.timeRisk.riskLevel > 1) {
+          safetyWarnings.push({
+            type: 'time_warning',
+            severity: 'info',
+            message: `🌙 ${safetyCheck.timeRisk.factors.join(', ')} - extra caution advised`
+          });
+        }
+        
+      } catch (safetyError) {
+        console.error('Safety check failed for landmark:', safetyError.message);
+        // Add generic warning if safety check fails
+        safetyWarnings.push({
+          type: 'safety_check_failed',
+          severity: 'info',
+          message: '⚠️ Safety information unavailable - proceed with normal caution'
+        });
+      }
+    }
+    
+    if (!selectedLandmark) {
       // Fallback to random location if no landmarks found
       const mysteryPlaces = ['Hidden Spot', 'Secret Location', 'Mystery Destination'];
       const mysteryName = mysteryPlaces[Math.floor(Math.random() * mysteryPlaces.length)];
@@ -270,24 +344,24 @@ router.post('/sidequest/start', [
       
       console.log('No landmarks found, created random mystery location');
     } else {
-      // Create sidequest from discovered landmark
+      // Create sidequest from discovered (and safety-checked) landmark
       const sidequestLocation = new Location({
         name: 'Mystery Location', // Keep name secret until completion
-        latitude: landmark.latitude,
-        longitude: landmark.longitude,
+        latitude: selectedLandmark.latitude,
+        longitude: selectedLandmark.longitude,
         type: 'sidequest',
-        completionRadius: landmark.completionRadius,
+        completionRadius: selectedLandmark.completionRadius,
         isActive: true,
         // Store the real landmark info for reveal on completion
-        hiddenName: landmark.name,
-        hiddenDescription: landmark.description,
-        hiddenCategory: landmark.category,
-        difficulty: landmark.difficulty,
-        osmId: landmark.id
+        hiddenName: selectedLandmark.name,
+        hiddenDescription: selectedLandmark.description,
+        hiddenCategory: selectedLandmark.category,
+        difficulty: selectedLandmark.difficulty,
+        osmId: selectedLandmark.id
       });
       await sidequestLocation.save();
       
-      console.log(`Created sidequest for landmark: ${landmark.name} (${landmark.distance}m away)`);
+      console.log(`Created sidequest for landmark: ${selectedLandmark.name} (${selectedLandmark.distance}m away)`);
     }
 
     res.json({
@@ -296,8 +370,11 @@ router.post('/sidequest/start', [
       data: {
         type: 'sidequest',
         message: 'Destination unknown - follow your compass!',
-        // Don't reveal coordinates or name to keep it mysterious
-        estimatedDistance: '300-800 meters away'
+        estimatedDistance: '300-800 meters away',
+        safetyWarnings: safetyWarnings.length > 0 ? safetyWarnings : undefined,
+        safetyMessage: safetyWarnings.length > 0 
+          ? 'Safety notices for your adventure - please review before proceeding'
+          : 'Have a safe adventure!'
       }
     });
 

@@ -9,6 +9,7 @@ require('dotenv').config();
 const connectDB = require('./config/database');
 const gpsRoutes = require('./routes/gps');
 const locationRoutes = require('./routes/locations');
+const safetyRoutes = require('./routes/safety');
 const errorHandler = require('./middleware/errorHandler');
 
 const app = express();
@@ -61,6 +62,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/gps', gpsRoutes);
 app.use('/api', locationRoutes);
+app.use('/api/safety', safetyRoutes);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -73,6 +75,10 @@ app.get('/', (req, res) => {
       locations: '/api/locations',
       sidequestStart: '/api/sidequest/start',
       targetReached: '/api/target/reached',
+      safety: '/api/safety',
+      safetyRoute: '/api/safety/analyze-route',
+      safetyLocation: '/api/safety/analyze-location',
+      emergencyServices: '/api/safety/emergency-services',
       health: '/health'
     }
   });
